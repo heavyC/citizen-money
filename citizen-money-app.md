@@ -17,16 +17,16 @@ Transactions sync → categorized + stored
 ↓
 AI analysis layer runs continuously
 ↓
-┌──────────────────────────────────┐
-│ Proactive Insights Engine │
-│ - Anomaly detection │
-│ - Trend analysis │
-│ - Goal tracking │
-│ - Subscription audit │
-└──────────────────────────────────┘
+┌──────────────────────────────────
+│ Proactive Insights Engine
+│ - Anomaly detection
+│ - Trend analysis
+│ - Goal tracking
+│ - Subscription audit
+└──────────────────────────────────
 ↓
 User-facing surfaces:
-├── Dashboard (spending, net worth, budgets)
+├── Dashboard (transactions, spending, net worth, budgets)
 ├── AI Chat ("ask your money anything")
 ├── Weekly digest (plain-English summary)
 └── Alerts (anomalies, opportunities)
@@ -107,7 +107,7 @@ Deduplicates against already-surfaced insights
 ↓
 Stores new insights → pushes notifications
 
-## Tech Stack
+## Technical Details and Stack
 
 | Layer           | Tech                                        |
 | --------------- | ------------------------------------------- |
@@ -121,6 +121,23 @@ Stores new insights → pushes notifications
 | Auth            | Clerk or NextAuth                           |
 | Email digests   | Resend or SendGrid                          |
 | Infra           | AWS (ECS/Fargate or Lambda)                 |
+
+## Strategy
+
+1. Write a plan with success criteria for each phase to be checked off, include
+   project scaffolding, .gitignore, and rigorous unit testing.
+2. Execute the plan ensuring all success criteria are met.
+3. Carry out extensive integration testing with Playwright, fixing defects.
+4. This project is only complete when the MVP is finished and tested, with the server
+   running and ready for a user.
+5. Remove any of the existing code and file structure as needed.
+
+## Coding standards
+
+1. Use the latest versions of libraries and idiomatic approaches as of today.
+2. Keep it simple - never over-engineer, Always simplify, no unneccessary defensive
+   programming. No extra features - focus on simplicity.
+3. Be concise, keep README minimal. NO EMOJIs.
 
 ## What Makes It Differentiated from Monarch
 
