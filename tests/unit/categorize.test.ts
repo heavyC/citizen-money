@@ -58,11 +58,11 @@ describe("resolveCategory", () => {
       plaidConfidenceLevel: "HIGH",
     });
 
-    expect(result).toEqual({ category: "TRANSPORTATION_GAS", source: "plaid" });
+    expect(result).toEqual({ category: "transportation gas", source: "plaid" });
     expect(createMock).not.toHaveBeenCalled();
   });
 
-  it("falls back to Claude for low-confidence or missing Plaid categories", async () => {
+  it("falls back to Claude for low-confidence Plaid categories", async () => {
     const result = await resolveCategory({
       userId,
       name: "SOME AMBIGUOUS MERCHANT",
@@ -74,5 +74,34 @@ describe("resolveCategory", () => {
 
     expect(result).toEqual({ category: "Restaurants", source: "ai" });
     expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to Claude when Plaid provides no category at all", async () => {
+    const result = await resolveCategory({
+      userId,
+      name: "NO PLAID CATEGORY MERCHANT",
+      merchantName: "No Category Co",
+      amount: 12,
+      plaidDetailedCategory: null,
+      plaidConfidenceLevel: null,
+    });
+
+    expect(result.source).toBe("ai");
+    expect(createMock).toHaveBeenCalled();
+  });
+
+  it("defaults to Other when Claude's response doesn't parse as a valid category", async () => {
+    createMock.mockResolvedValueOnce({ content: [{ type: "text", text: '{"category": "Not A Real Category"}' }] });
+
+    const result = await resolveCategory({
+      userId,
+      name: "GARBLED RESPONSE MERCHANT",
+      merchantName: "Garbled Co",
+      amount: 8,
+      plaidDetailedCategory: null,
+      plaidConfidenceLevel: null,
+    });
+
+    expect(result).toEqual({ category: "Other", source: "ai" });
   });
 });

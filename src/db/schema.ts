@@ -59,6 +59,7 @@ export const transactions = pgTable(
     name: text("name").notNull(),
     merchantName: text("merchant_name"),
     plaidCategory: text("plaid_category"),
+    plaidCategoryConfidence: text("plaid_category_confidence"),
     category: text("category").notNull(),
     categorySource: text("category_source", { enum: ["plaid", "ai", "user_correction"] })
       .notNull()

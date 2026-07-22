@@ -15,6 +15,13 @@
       "when": 1784745631936,
       "tag": "0001_overconfident_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784757573814,
+      "tag": "0002_tough_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

@@ -44,6 +44,7 @@ describe("Plaid sandbox end-to-end", () => {
       for (const txn of syncedTransactions) {
         expect(txn.category).toBeTruthy();
       }
+      expect(syncedTransactions.some((txn) => txn.plaidCategoryConfidence !== null)).toBe(true);
     },
     90_000,
   );

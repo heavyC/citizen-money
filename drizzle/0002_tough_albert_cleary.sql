@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "plaid_category_confidence" text;

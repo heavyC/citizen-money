@@ -11,6 +11,15 @@ export type { Category } from "@/lib/categories";
 
 const HIGH_CONFIDENCE_LEVELS = new Set(["VERY_HIGH", "HIGH"]);
 
+export function normalizeCategoryName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[-_]/g, " ")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function normalizeMerchantName(name: string): string {
   return name
     .toLowerCase()
@@ -65,7 +74,7 @@ export async function resolveCategory(input: {
   }
 
   if (input.plaidDetailedCategory && input.plaidConfidenceLevel && HIGH_CONFIDENCE_LEVELS.has(input.plaidConfidenceLevel)) {
-    return { category: input.plaidDetailedCategory, source: "plaid" };
+    return { category: normalizeCategoryName(input.plaidDetailedCategory), source: "plaid" };
   }
 
   const category = await categorizeWithClaude(input);
