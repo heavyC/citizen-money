@@ -17,15 +17,30 @@ function formatCurrency(value: number): string {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
 
+/**
+ * Caps the chart at MAX_SLOTS rows, folding the rest into an "Other" bucket.
+ * A real "Other" category can already be among the top rows — in that case
+ * the overflow is merged into it instead of producing a duplicate row.
+ */
+export function foldIntoTopCategories(data: CategorySpending[], maxSlots: number): CategorySpending[] {
+  const top = data.slice(0, maxSlots - 1);
+  const rest = data.slice(maxSlots - 1);
+  if (rest.length === 0) return top;
+
+  const otherTotal = rest.reduce((sum, d) => sum + d.total, 0);
+  const existingOtherIndex = top.findIndex((r) => r.category === "Other");
+  if (existingOtherIndex >= 0) {
+    return top.map((r, i) => (i === existingOtherIndex ? { ...r, total: r.total + otherTotal } : r));
+  }
+  return [...top, { category: "Other", total: otherTotal }];
+}
+
 export function SpendingChart({ data }: { data: CategorySpending[] }) {
   if (data.length === 0) {
     return <p className="text-sm text-muted-foreground">No spending in this period yet.</p>;
   }
 
-  const top = data.slice(0, MAX_SLOTS - 1);
-  const rest = data.slice(MAX_SLOTS - 1);
-  const otherTotal = rest.reduce((sum, d) => sum + d.total, 0);
-  const rows = rest.length > 0 ? [...top, { category: "Other", total: otherTotal }] : top;
+  const rows = foldIntoTopCategories(data, MAX_SLOTS);
   const max = Math.max(...rows.map((r) => r.total));
 
   return (
