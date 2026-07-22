@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { requireUserId } from "@/lib/auth";
 import { getAccountsForUser, getNetWorth, getSpendingByCategory } from "@/lib/finance";
@@ -21,19 +20,7 @@ export async function Dashboard() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 py-16">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <nav className="flex gap-4 text-sm underline">
-          <Link href="/connect-bank">Connect bank</Link>
-          <Link href="/transactions">Transactions</Link>
-          <Link href="/budgets">Budgets</Link>
-          <Link href="/chat">Chat</Link>
-          <Link href="/alerts">Alerts</Link>
-          <Link href="/digest">Digest</Link>
-          <Link href="/goals">Goals</Link>
-          <Link href="/subscriptions">Subscriptions</Link>
-        </nav>
-      </div>
+      <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       <StatTile label="Net worth" value={formatCurrency(netWorth)} />
 

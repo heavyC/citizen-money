@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { StoreProvider } from "@/store/provider";
 import { ChatLauncher } from "@/components/chat-launcher";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col">
           <StoreProvider>
+            <SiteHeader />
             {children}
             <ChatLauncher />
           </StoreProvider>
