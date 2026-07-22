@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(typeof process.loadEnvFile\\)\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(xargs cat)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
