@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions } from "@/db/schema";
 import { getNetWorth, getSpendingByCategory } from "@/lib/finance";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserIdA = `test_finance_a_${crypto.randomUUID()}`;
 const clerkUserIdB = `test_finance_b_${crypto.randomUUID()}`;
@@ -27,12 +28,15 @@ describe("finance queries", () => {
 
     const [accountA1] = await db.select().from(accounts).where(eq(accounts.plaidAccountId, `acc_a1_${userAId}`));
 
+    const groceriesId = await seedCategoryId("Groceries");
+    const coffeeId = await seedCategoryId("Coffee Shops");
+
     await db.insert(transactions).values([
-      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn1_${userAId}`, amount: "40.00", date: "2026-07-01", name: "Groceries A", category: "Groceries" },
-      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn2_${userAId}`, amount: "60.00", date: "2026-07-05", name: "Groceries B", category: "Groceries" },
-      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn3_${userAId}`, amount: "25.00", date: "2026-07-10", name: "Coffee", category: "Coffee Shops" },
+      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn1_${userAId}`, amount: "40.00", date: "2026-07-01", name: "Groceries A", categoryId: groceriesId },
+      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn2_${userAId}`, amount: "60.00", date: "2026-07-05", name: "Groceries B", categoryId: groceriesId },
+      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn3_${userAId}`, amount: "25.00", date: "2026-07-10", name: "Coffee", categoryId: coffeeId },
       // A refund/inflow (negative amount) should not count as spend.
-      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn4_${userAId}`, amount: "-15.00", date: "2026-07-12", name: "Refund", category: "Groceries" },
+      { accountId: accountA1.id, userId: userAId, plaidTransactionId: `txn4_${userAId}`, amount: "-15.00", date: "2026-07-12", name: "Refund", categoryId: groceriesId },
     ]);
   });
 

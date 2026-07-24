@@ -2,9 +2,10 @@ import "server-only";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { accounts, budgets, goals, transactions } from "@/db/schema";
+import { accounts, budgets, categories, goals, transactions } from "@/db/schema";
 import { monthRange } from "@/lib/date-range";
 import { detectRecurringMerchants } from "@/lib/recurring";
+import { getCategoryIdByNameCI } from "@/lib/category-repo";
 
 const queryTransactionsSchema = z.object({
   category: z.string().optional().describe("Filter to this category, if given."),
@@ -14,15 +15,29 @@ const queryTransactionsSchema = z.object({
 
 async function queryTransactions(userId: string, args: z.infer<typeof queryTransactionsSchema>) {
   const conditions = [eq(transactions.userId, userId)];
-  if (args.category) conditions.push(sql`lower(${transactions.category}) = lower(${args.category})`);
+  if (args.category) {
+    const categoryId = await getCategoryIdByNameCI(args.category);
+    if (!categoryId) {
+      return { count: 0, total: 0, transactions: [], note: `No category named "${args.category}" exists.` };
+    }
+    conditions.push(eq(transactions.categoryId, categoryId));
+  }
   if (args.dateFrom) conditions.push(gte(transactions.date, args.dateFrom));
   if (args.dateTo) conditions.push(lte(transactions.date, args.dateTo));
 
-  const rows = await db.query.transactions.findMany({
-    where: and(...conditions),
-    orderBy: (t, { desc }) => [desc(t.date)],
-    limit: 200,
-  });
+  const rows = await db
+    .select({
+      date: transactions.date,
+      name: transactions.name,
+      merchantName: transactions.merchantName,
+      amount: transactions.amount,
+      category: categories.name,
+    })
+    .from(transactions)
+    .innerJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(and(...conditions))
+    .orderBy(sql`${transactions.date} desc`)
+    .limit(200);
 
   const total = rows.reduce((sum, r) => sum + Number(r.amount), 0);
   return {
@@ -40,8 +55,13 @@ const calculateBudgetVarianceSchema = z.object({
 async function calculateBudgetVariance(userId: string, args: z.infer<typeof calculateBudgetVarianceSchema>) {
   const { from, to } = monthRange(args.period === "current_month" ? 0 : 1);
 
+  const categoryId = await getCategoryIdByNameCI(args.category);
+  if (!categoryId) {
+    return { error: `No budget set for category "${args.category}".` };
+  }
+
   const budget = await db.query.budgets.findFirst({
-    where: and(eq(budgets.userId, userId), sql`lower(${budgets.category}) = lower(${args.category})`),
+    where: and(eq(budgets.userId, userId), eq(budgets.categoryId, categoryId)),
   });
   if (!budget) {
     return { error: `No budget set for category "${args.category}".` };
@@ -53,7 +73,7 @@ async function calculateBudgetVariance(userId: string, args: z.infer<typeof calc
     .where(
       and(
         eq(transactions.userId, userId),
-        sql`lower(${transactions.category}) = lower(${args.category})`,
+        eq(transactions.categoryId, categoryId),
         gte(transactions.date, from),
         lte(transactions.date, to),
         sql`${transactions.amount} > 0`,
@@ -106,23 +126,32 @@ async function comparePeriods(userId: string, args: z.infer<typeof comparePeriod
   const current = monthRange(0);
   const previous = monthRange(1);
 
+  let categoryId: string | null = null;
+  if (args.category) {
+    categoryId = await getCategoryIdByNameCI(args.category);
+    if (!categoryId) {
+      return { currentTotal: 0, previousTotal: 0, biggestChange: null, byCategory: [], note: `No category named "${args.category}" exists.` };
+    }
+  }
+
   async function totalsByCategory(from: string, to: string) {
     const conditions = [eq(transactions.userId, userId), gte(transactions.date, from), lte(transactions.date, to), sql`${transactions.amount} > 0`];
-    if (args.category) conditions.push(sql`lower(${transactions.category}) = lower(${args.category})`);
+    if (categoryId) conditions.push(eq(transactions.categoryId, categoryId));
 
     const rows = await db
-      .select({ category: transactions.category, total: sql<string>`sum(${transactions.amount})` })
+      .select({ category: categories.name, total: sql<string>`sum(${transactions.amount})` })
       .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
       .where(and(...conditions))
-      .groupBy(transactions.category);
+      .groupBy(categories.name);
     return new Map(rows.map((r) => [r.category, Number(r.total)]));
   }
 
   const currentTotals = await totalsByCategory(current.from, current.to);
   const previousTotals = await totalsByCategory(previous.from, previous.to);
 
-  const categories = new Set([...currentTotals.keys(), ...previousTotals.keys()]);
-  const deltas = [...categories].map((category) => {
+  const categoryNames = new Set([...currentTotals.keys(), ...previousTotals.keys()]);
+  const deltas = [...categoryNames].map((category) => {
     const currentAmount = currentTotals.get(category) ?? 0;
     const previousAmount = previousTotals.get(category) ?? 0;
     return { category, currentAmount, previousAmount, delta: currentAmount - previousAmount };

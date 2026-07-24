@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, afterAll, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users, categoryCorrections } from "@/db/schema";
+import { users, categoryCorrections, categories } from "@/db/schema";
+import { seedCategoryId } from "../helpers/category";
 
 const createMock = vi.fn(async () => ({
   content: [{ type: "text", text: '{"category": "Restaurants"}' }],
@@ -29,10 +30,11 @@ describe("resolveCategory", () => {
   });
 
   it("uses a stored user correction and never calls Claude", async () => {
+    const groceriesId = await seedCategoryId("Groceries");
     await db.insert(categoryCorrections).values({
       userId,
       merchantNameNormalized: normalizeMerchantName("Trader Joes"),
-      category: "Groceries",
+      categoryId: groceriesId,
     });
 
     const result = await resolveCategory({
@@ -44,7 +46,7 @@ describe("resolveCategory", () => {
       plaidConfidenceLevel: "VERY_HIGH",
     });
 
-    expect(result).toEqual({ category: "Groceries", source: "user_correction" });
+    expect(result).toEqual({ categoryId: groceriesId, source: "user_correction" });
     expect(createMock).not.toHaveBeenCalled();
   });
 
@@ -58,7 +60,9 @@ describe("resolveCategory", () => {
       plaidConfidenceLevel: "HIGH",
     });
 
-    expect(result).toEqual({ category: "transportation gas", source: "plaid" });
+    expect(result.source).toBe("plaid");
+    const category = await db.query.categories.findFirst({ where: eq(categories.id, result.categoryId) });
+    expect(category?.name).toBe("transportation gas");
     expect(createMock).not.toHaveBeenCalled();
   });
 
@@ -72,7 +76,9 @@ describe("resolveCategory", () => {
       plaidConfidenceLevel: "LOW",
     });
 
-    expect(result).toEqual({ category: "Restaurants", source: "ai" });
+    expect(result.source).toBe("ai");
+    const category = await db.query.categories.findFirst({ where: eq(categories.id, result.categoryId) });
+    expect(category?.name).toBe("Restaurants");
     expect(createMock).toHaveBeenCalledTimes(1);
   });
 
@@ -102,6 +108,8 @@ describe("resolveCategory", () => {
       plaidConfidenceLevel: null,
     });
 
-    expect(result).toEqual({ category: "Other", source: "ai" });
+    expect(result.source).toBe("ai");
+    const category = await db.query.categories.findFirst({ where: eq(categories.id, result.categoryId) });
+    expect(category?.name).toBe("Other");
   });
 });

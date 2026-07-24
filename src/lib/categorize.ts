@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { categoryCorrections, transactions } from "@/db/schema";
 import { CATEGORIES, type Category } from "@/lib/categories";
+import { getOrCreateCategoryId } from "@/lib/category-repo";
 
 export { CATEGORIES } from "@/lib/categories";
 export type { Category } from "@/lib/categories";
@@ -54,7 +55,9 @@ async function categorizeWithClaude(input: { name: string; merchantName?: string
 /**
  * Resolution order: a stored user correction for this merchant always wins
  * (no LLM call); otherwise a high-confidence Plaid category is used as-is;
- * only ambiguous cases are sent to Claude.
+ * only ambiguous cases are sent to Claude. Always returns a `categoryId`
+ * referencing a row in `categories` — the category name is resolved (and
+ * created on first use) via `getOrCreateCategoryId`.
  */
 export async function resolveCategory(input: {
   userId: string;
@@ -63,22 +66,24 @@ export async function resolveCategory(input: {
   amount: number;
   plaidDetailedCategory?: string | null;
   plaidConfidenceLevel?: string | null;
-}): Promise<{ category: string; source: "plaid" | "ai" | "user_correction" }> {
+}): Promise<{ categoryId: string; source: "plaid" | "ai" | "user_correction" }> {
   const normalized = normalizeMerchantName(input.merchantName ?? input.name);
 
   const correction = await db.query.categoryCorrections.findFirst({
     where: and(eq(categoryCorrections.userId, input.userId), eq(categoryCorrections.merchantNameNormalized, normalized)),
   });
   if (correction) {
-    return { category: correction.category, source: "user_correction" };
+    return { categoryId: correction.categoryId, source: "user_correction" };
   }
 
   if (input.plaidDetailedCategory && input.plaidConfidenceLevel && HIGH_CONFIDENCE_LEVELS.has(input.plaidConfidenceLevel)) {
-    return { category: normalizeCategoryName(input.plaidDetailedCategory), source: "plaid" };
+    const categoryId = await getOrCreateCategoryId(normalizeCategoryName(input.plaidDetailedCategory));
+    return { categoryId, source: "plaid" };
   }
 
   const category = await categorizeWithClaude(input);
-  return { category, source: "ai" };
+  const categoryId = await getOrCreateCategoryId(category);
+  return { categoryId, source: "ai" };
 }
 
 /**
@@ -86,7 +91,7 @@ export async function resolveCategory(input: {
  * transaction. Future transactions from the same merchant resolve directly
  * from this table without another AI call.
  */
-export async function applyCategoryCorrection(input: { userId: string; transactionId: string; category: string }) {
+export async function applyCategoryCorrection(input: { userId: string; transactionId: string; categoryId: string }) {
   const txn = await db.query.transactions.findFirst({
     where: and(eq(transactions.id, input.transactionId), eq(transactions.userId, input.userId)),
   });
@@ -101,16 +106,16 @@ export async function applyCategoryCorrection(input: { userId: string; transacti
     .values({
       userId: input.userId,
       merchantNameNormalized: normalized,
-      category: input.category,
+      categoryId: input.categoryId,
       exampleTransactionId: txn.id,
     })
     .onConflictDoUpdate({
       target: [categoryCorrections.userId, categoryCorrections.merchantNameNormalized],
-      set: { category: input.category, exampleTransactionId: txn.id },
+      set: { categoryId: input.categoryId, exampleTransactionId: txn.id },
     });
 
   await db
     .update(transactions)
-    .set({ category: input.category, categorySource: "user_correction", updatedAt: new Date() })
+    .set({ categoryId: input.categoryId, categorySource: "user_correction", updatedAt: new Date() })
     .where(eq(transactions.id, txn.id));
 }

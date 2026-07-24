@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, budgets, insights } from "@/db/schema";
 import { runInsightOrchestratorForUser } from "@/agents/insights/orchestrator";
 import { monthRange } from "@/lib/date-range";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_orchestrator_${crypto.randomUUID()}`;
 let userId: string;
@@ -17,7 +18,8 @@ describe("insight orchestrator", () => {
       .insert(accounts)
       .values({ plaidItemId: item.id, userId, plaidAccountId: `acc_${userId}`, name: "Checking", type: "depository", currentBalance: "50.00" })
       .returning();
-    await db.insert(budgets).values({ userId, category: "Groceries", monthlyLimit: "50.00" });
+    const groceriesId = await seedCategoryId("Groceries");
+    await db.insert(budgets).values({ userId, categoryId: groceriesId, monthlyLimit: "50.00" });
     await db.insert(transactions).values({
       accountId: account.id,
       userId,
@@ -25,7 +27,7 @@ describe("insight orchestrator", () => {
       amount: "200.00",
       date: monthRange(0).from,
       name: "Grocery Store",
-      category: "Groceries",
+      categoryId: groceriesId,
     });
   });
 

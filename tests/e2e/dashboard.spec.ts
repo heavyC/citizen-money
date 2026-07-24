@@ -19,7 +19,7 @@ test.describe("authenticated dashboard flow", () => {
     // Uses a category no other spec mutates transactions into, so the
     // spent-vs-limit text here can't be perturbed by unrelated tests sharing
     // this same fixed test user.
-    await page.getByLabel("Category").selectOption("Insurance");
+    await page.getByLabel("Category").selectOption({ label: "Insurance" });
     await page.getByLabel("Monthly limit").fill("250");
     await page.getByRole("button", { name: "Save budget" }).click();
 
@@ -30,7 +30,7 @@ test.describe("authenticated dashboard flow", () => {
 
   test("transaction category filter narrows the list without erroring", async ({ page }) => {
     await page.goto("/transactions");
-    await page.getByRole("combobox").first().selectOption("Groceries");
+    await page.getByRole("combobox").first().selectOption({ label: "Groceries" });
     await expect(page.locator("body")).toBeVisible();
   });
 });

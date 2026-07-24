@@ -2,29 +2,29 @@
 
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { CATEGORIES } from "@/lib/categories";
 import { upsertBudget } from "@/app/budgets/actions";
+import type { DbCategory } from "@/db/schema";
 
-export function BudgetForm() {
+export function BudgetForm({ categories }: { categories: DbCategory[] }) {
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <form
       ref={formRef}
       action={async (formData: FormData) => {
-        const category = String(formData.get("category"));
+        const categoryId = String(formData.get("categoryId"));
         const monthlyLimit = Number(formData.get("monthlyLimit"));
-        await upsertBudget(category, monthlyLimit);
+        await upsertBudget(categoryId, monthlyLimit);
         formRef.current?.reset();
       }}
       className="flex items-end gap-3"
     >
       <label className="flex flex-col gap-1 text-sm">
         Category
-        <select name="category" className="rounded-md border bg-background px-2 py-1.5" required>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
+        <select name="categoryId" className="rounded-md border bg-background px-2 py-1.5" required>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
             </option>
           ))}
         </select>

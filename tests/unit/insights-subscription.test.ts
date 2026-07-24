@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, subscriptions } from "@/db/schema";
 import { runSubscriptionScanner } from "@/agents/insights/subscription-scanner";
 import { monthRange } from "@/lib/date-range";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_subscription_${crypto.randomUUID()}`;
 let userId: string;
@@ -26,9 +27,10 @@ describe("subscription scanner", () => {
   });
 
   it("fires for a merchant charging the same amount repeatedly", async () => {
+    const subscriptionsId = await seedCategoryId("Subscriptions");
     await db.insert(transactions).values([
-      { accountId, userId, plaidTransactionId: `s1_${userId}`, amount: "15.99", date: monthRange(0).from, name: "Streamflix", merchantName: "Streamflix", category: "Subscriptions" },
-      { accountId, userId, plaidTransactionId: `s2_${userId}`, amount: "15.99", date: monthRange(1).from, name: "Streamflix", merchantName: "Streamflix", category: "Subscriptions" },
+      { accountId, userId, plaidTransactionId: `s1_${userId}`, amount: "15.99", date: monthRange(0).from, name: "Streamflix", merchantName: "Streamflix", categoryId: subscriptionsId },
+      { accountId, userId, plaidTransactionId: `s2_${userId}`, amount: "15.99", date: monthRange(1).from, name: "Streamflix", merchantName: "Streamflix", categoryId: subscriptionsId },
     ]);
 
     const candidates = await runSubscriptionScanner(userId);
@@ -48,6 +50,7 @@ describe("subscription scanner", () => {
       .values({ plaidItemId: item.id, userId: user.id, plaidAccountId: `acc_${user.id}`, name: "Checking", type: "depository" })
       .returning();
 
+    const shoppingId = await seedCategoryId("Shopping");
     await db.insert(transactions).values({
       accountId: account.id,
       userId: user.id,
@@ -55,7 +58,7 @@ describe("subscription scanner", () => {
       amount: "15.99",
       date: monthRange(0).from,
       name: "One Time Shop",
-      category: "Shopping",
+      categoryId: shoppingId,
     });
 
     const candidates = await runSubscriptionScanner(user.id);

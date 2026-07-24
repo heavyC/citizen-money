@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions } from "@/db/schema";
 import { computeWeeklyStats } from "@/agents/digest/stats";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_digest_stats_${crypto.randomUUID()}`;
 let userId: string;
@@ -25,12 +26,15 @@ describe("computeWeeklyStats", () => {
       .returning();
     accountId = account.id;
 
+    const groceriesId = await seedCategoryId("Groceries");
+    const coffeeId = await seedCategoryId("Coffee Shops");
+
     await db.insert(transactions).values([
       // This week: 100 groceries + 40 coffee = 140
-      { accountId, userId, plaidTransactionId: `w1_${userId}`, amount: "100.00", date: daysAgo(2), name: "Grocery Store", category: "Groceries" },
-      { accountId, userId, plaidTransactionId: `w2_${userId}`, amount: "40.00", date: daysAgo(1), name: "Coffee Shop", category: "Coffee Shops" },
+      { accountId, userId, plaidTransactionId: `w1_${userId}`, amount: "100.00", date: daysAgo(2), name: "Grocery Store", categoryId: groceriesId },
+      { accountId, userId, plaidTransactionId: `w2_${userId}`, amount: "40.00", date: daysAgo(1), name: "Coffee Shop", categoryId: coffeeId },
       // Trailing weeks (8-28 days ago): 80 total -> avg weekly = 20
-      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "80.00", date: daysAgo(20), name: "Grocery Store", category: "Groceries" },
+      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "80.00", date: daysAgo(20), name: "Grocery Store", categoryId: groceriesId },
     ]);
   });
 

@@ -17,7 +17,9 @@ test("correcting a transaction's category persists across reload", async ({ page
   await expect(page.locator("tbody tr")).toHaveCount(1, { timeout: 10_000 });
 
   const currentValue = await firstRowSelect.inputValue();
-  const targetValue = currentValue === "Entertainment" ? "Shopping" : "Entertainment";
+  const optionValues = await firstRowSelect.locator("option").evaluateAll((opts) => opts.map((o) => (o as HTMLOptionElement).value));
+  const targetValue = optionValues.find((v) => v !== currentValue);
+  if (!targetValue) throw new Error("Need at least two category options to test switching.");
 
   await firstRowSelect.selectOption(targetValue);
   await page.waitForTimeout(500); // let the server action's revalidate land

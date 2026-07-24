@@ -22,6 +22,20 @@
       "when": 1784757573814,
       "tag": "0002_tough_albert_cleary",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784853779668,
+      "tag": "0003_add_categories_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784853856252,
+      "tag": "0004_category_id_not_null",
+      "breakpoints": true
     }
   ]
 }

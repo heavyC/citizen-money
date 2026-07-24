@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, goals } from "@/db/schema";
 import { runChatTurn } from "@/agents/chat/graph";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_chat_graph_${crypto.randomUUID()}`;
 let userId: string;
@@ -35,11 +36,14 @@ describe("chat graph end-to-end (real Claude)", () => {
       targetDate: monthsAgoDate(-6, 1),
     });
 
+    const groceriesId = await seedCategoryId("Groceries");
+    const shoppingId = await seedCategoryId("Shopping");
+
     await db.insert(transactions).values([
-      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "80.00", date: monthsAgoDate(0, 3), name: "Grocery Store", category: "Groceries" },
-      { accountId, userId, plaidTransactionId: `t2_${userId}`, amount: "45.00", date: monthsAgoDate(1, 3), name: "Grocery Store", category: "Groceries" },
-      { accountId, userId, plaidTransactionId: `t3_${userId}`, amount: "40.00", date: monthsAgoDate(2, 3), name: "Grocery Store", category: "Groceries" },
-      { accountId, userId, plaidTransactionId: `t4_${userId}`, amount: "300.00", date: monthsAgoDate(0, 5), name: "Home Depot", category: "Shopping" },
+      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "80.00", date: monthsAgoDate(0, 3), name: "Grocery Store", categoryId: groceriesId },
+      { accountId, userId, plaidTransactionId: `t2_${userId}`, amount: "45.00", date: monthsAgoDate(1, 3), name: "Grocery Store", categoryId: groceriesId },
+      { accountId, userId, plaidTransactionId: `t3_${userId}`, amount: "40.00", date: monthsAgoDate(2, 3), name: "Grocery Store", categoryId: groceriesId },
+      { accountId, userId, plaidTransactionId: `t4_${userId}`, amount: "300.00", date: monthsAgoDate(0, 5), name: "Home Depot", categoryId: shoppingId },
     ]);
   });
 

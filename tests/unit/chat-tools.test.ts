@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, budgets, goals } from "@/db/schema";
 import { chatTools } from "@/agents/chat/tools";
+import { seedCategoryId } from "../helpers/category";
 
 function getTool(name: string) {
   const tool = chatTools.find((t) => t.name === name);
@@ -32,19 +33,22 @@ describe("chat tools", () => {
       .returning();
     accountId = account.id;
 
-    await db.insert(budgets).values({ userId, category: "Groceries", monthlyLimit: "300.00" });
+    const groceriesId = await seedCategoryId("Groceries");
+    const subscriptionsId = await seedCategoryId("Subscriptions");
+
+    await db.insert(budgets).values({ userId, categoryId: groceriesId, monthlyLimit: "300.00" });
     await db.insert(goals).values({ userId, name: "Vacation", goalType: "vacation", targetAmount: "2000.00", startingAmount: "500.00" });
 
     await db.insert(transactions).values([
       // Current month groceries: 150 total
-      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "100.00", date: monthsAgoDate(0, 3), name: "Grocery Store", category: "Groceries" },
-      { accountId, userId, plaidTransactionId: `t2_${userId}`, amount: "50.00", date: monthsAgoDate(0, 10), name: "Grocery Store", category: "Groceries" },
+      { accountId, userId, plaidTransactionId: `t1_${userId}`, amount: "100.00", date: monthsAgoDate(0, 3), name: "Grocery Store", categoryId: groceriesId },
+      { accountId, userId, plaidTransactionId: `t2_${userId}`, amount: "50.00", date: monthsAgoDate(0, 10), name: "Grocery Store", categoryId: groceriesId },
       // Last month groceries: 60 total
-      { accountId, userId, plaidTransactionId: `t3_${userId}`, amount: "60.00", date: monthsAgoDate(1, 5), name: "Grocery Store", category: "Groceries" },
+      { accountId, userId, plaidTransactionId: `t3_${userId}`, amount: "60.00", date: monthsAgoDate(1, 5), name: "Grocery Store", categoryId: groceriesId },
       // Recurring subscription-like charge, same amount 3 months running
-      { accountId, userId, plaidTransactionId: `t4_${userId}`, amount: "15.99", date: monthsAgoDate(0, 1), name: "Streamflix", merchantName: "Streamflix", category: "Subscriptions" },
-      { accountId, userId, plaidTransactionId: `t5_${userId}`, amount: "15.99", date: monthsAgoDate(1, 1), name: "Streamflix", merchantName: "Streamflix", category: "Subscriptions" },
-      { accountId, userId, plaidTransactionId: `t6_${userId}`, amount: "15.99", date: monthsAgoDate(2, 1), name: "Streamflix", merchantName: "Streamflix", category: "Subscriptions" },
+      { accountId, userId, plaidTransactionId: `t4_${userId}`, amount: "15.99", date: monthsAgoDate(0, 1), name: "Streamflix", merchantName: "Streamflix", categoryId: subscriptionsId },
+      { accountId, userId, plaidTransactionId: `t5_${userId}`, amount: "15.99", date: monthsAgoDate(1, 1), name: "Streamflix", merchantName: "Streamflix", categoryId: subscriptionsId },
+      { accountId, userId, plaidTransactionId: `t6_${userId}`, amount: "15.99", date: monthsAgoDate(2, 1), name: "Streamflix", merchantName: "Streamflix", categoryId: subscriptionsId },
     ]);
   });
 

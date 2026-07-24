@@ -33,10 +33,11 @@ Drizzle ORM, Plaid (sandbox), Claude (Anthropic API) via LangGraph.js, Resend
    | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | A [Resend](https://resend.com) account (optional — digest generation works without it, email sending is skipped if unset) |
    | `CRON_SECRET` | Any random string — guards the `/api/cron/*` routes |
 
-3. Apply the database schema:
+3. Apply the database schema and seed the base categories:
 
    ```bash
    npm run db:migrate
+   npm run db:seed
    ```
 
 4. Run the app:

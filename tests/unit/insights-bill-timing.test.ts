@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users, plaidItems, accounts, transactions } from "@/db/schema";
 import { runBillTimingChecker } from "@/agents/insights/bill-timing-checker";
 import { monthRange } from "@/lib/date-range";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserIds: string[] = [];
 
@@ -29,10 +30,12 @@ describe("bill timing checker", () => {
     clerkUserIds.push(clerkUserId);
     const { userId, accountId } = await setupUser(clerkUserId);
     const date = monthRange(0).from;
+    const rentId = await seedCategoryId("Rent/Mortgage");
+    const insuranceId = await seedCategoryId("Insurance");
 
     await db.insert(transactions).values([
-      { accountId, userId, plaidTransactionId: `b1_${userId}`, amount: "200.00", date, name: "Rent", category: "Rent/Mortgage" },
-      { accountId, userId, plaidTransactionId: `b2_${userId}`, amount: "150.00", date, name: "Car Insurance", category: "Insurance" },
+      { accountId, userId, plaidTransactionId: `b1_${userId}`, amount: "200.00", date, name: "Rent", categoryId: rentId },
+      { accountId, userId, plaidTransactionId: `b2_${userId}`, amount: "150.00", date, name: "Car Insurance", categoryId: insuranceId },
     ]);
 
     const candidates = await runBillTimingChecker(userId);
@@ -45,10 +48,12 @@ describe("bill timing checker", () => {
     clerkUserIds.push(clerkUserId);
     const { userId, accountId } = await setupUser(clerkUserId);
     const { from, to } = monthRange(0);
+    const rentId = await seedCategoryId("Rent/Mortgage");
+    const insuranceId = await seedCategoryId("Insurance");
 
     await db.insert(transactions).values([
-      { accountId, userId, plaidTransactionId: `s1_${userId}`, amount: "200.00", date: from, name: "Rent", category: "Rent/Mortgage" },
-      { accountId, userId, plaidTransactionId: `s2_${userId}`, amount: "150.00", date: to, name: "Car Insurance", category: "Insurance" },
+      { accountId, userId, plaidTransactionId: `s1_${userId}`, amount: "200.00", date: from, name: "Rent", categoryId: rentId },
+      { accountId, userId, plaidTransactionId: `s2_${userId}`, amount: "150.00", date: to, name: "Car Insurance", categoryId: insuranceId },
     ]);
 
     const candidates = await runBillTimingChecker(userId);

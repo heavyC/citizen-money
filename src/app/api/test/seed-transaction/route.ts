@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { plaidItems, accounts, transactions } from "@/db/schema";
 import { requireUserId, UnauthorizedError } from "@/lib/auth";
+import { getOrCreateCategoryId } from "@/lib/category-repo";
 
 /**
  * Test-only: ensures the signed-in test user has at least one transaction to
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
         .returning();
     }
 
+    const categoryId = await getOrCreateCategoryId("Shopping");
     const [txn] = await db
       .insert(transactions)
       .values({
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
         amount: "25.00",
         date: new Date().toISOString().slice(0, 10),
         name: "Test Merchant",
-        category: "Shopping",
+        categoryId,
       })
       .returning();
 

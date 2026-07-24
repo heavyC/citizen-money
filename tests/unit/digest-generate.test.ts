@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions } from "@/db/schema";
 import { generateWeeklyDigest } from "@/agents/digest/generate";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_digest_generate_${crypto.randomUUID()}`;
 let userId: string;
@@ -23,6 +24,7 @@ describe("generateWeeklyDigest (real Claude)", () => {
       .values({ plaidItemId: item.id, userId, plaidAccountId: `acc_${userId}`, name: "Checking", type: "depository", currentBalance: "1000.00" })
       .returning();
 
+    const categoryId = await seedCategoryId("Shopping");
     await db.insert(transactions).values({
       accountId: account.id,
       userId,
@@ -30,7 +32,7 @@ describe("generateWeeklyDigest (real Claude)", () => {
       amount: "247.00",
       date: daysAgo(2),
       name: "Home Depot",
-      category: "Shopping",
+      categoryId,
     });
   });
 

@@ -42,7 +42,7 @@ describe("Plaid sandbox end-to-end", () => {
       const syncedTransactions = await db.query.transactions.findMany({ where: eq(transactions.userId, user.id) });
       expect(syncedTransactions.length).toBeGreaterThan(0);
       for (const txn of syncedTransactions) {
-        expect(txn.category).toBeTruthy();
+        expect(txn.categoryId).toBeTruthy();
       }
       expect(syncedTransactions.some((txn) => txn.plaidCategoryConfidence !== null)).toBe(true);
     },

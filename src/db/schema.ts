@@ -30,6 +30,12 @@ export const plaidItems = pgTable("plaid_items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const categories = pgTable("categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   plaidItemId: uuid("plaid_item_id").notNull().references(() => plaidItems.id, { onDelete: "cascade" }),
@@ -60,7 +66,7 @@ export const transactions = pgTable(
     merchantName: text("merchant_name"),
     plaidCategory: text("plaid_category"),
     plaidCategoryConfidence: text("plaid_category_confidence"),
-    category: text("category").notNull(),
+    categoryId: uuid("category_id").notNull().references(() => categories.id),
     categorySource: text("category_source", { enum: ["plaid", "ai", "user_correction"] })
       .notNull()
       .default("plaid"),
@@ -71,6 +77,7 @@ export const transactions = pgTable(
   (t) => [
     index("transactions_user_date_idx").on(t.userId, t.date),
     index("transactions_account_idx").on(t.accountId),
+    index("transactions_category_idx").on(t.categoryId),
   ],
 );
 
@@ -80,7 +87,7 @@ export const categoryCorrections = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     merchantNameNormalized: text("merchant_name_normalized").notNull(),
-    category: text("category").notNull(),
+    categoryId: uuid("category_id").notNull().references(() => categories.id),
     exampleTransactionId: uuid("example_transaction_id").references(() => transactions.id, {
       onDelete: "set null",
     }),
@@ -122,12 +129,12 @@ export const budgets = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    category: text("category").notNull(),
+    categoryId: uuid("category_id").notNull().references(() => categories.id),
     monthlyLimit: numeric("monthly_limit", { precision: 14, scale: 2 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("budgets_user_category_idx").on(t.userId, t.category)],
+  (t) => [uniqueIndex("budgets_user_category_idx").on(t.userId, t.categoryId)],
 );
 
 export const insights = pgTable(
@@ -213,6 +220,7 @@ export const chatMessages = pgTable(
 );
 
 export type User = typeof users.$inferSelect;
+export type DbCategory = typeof categories.$inferSelect;
 export type PlaidItem = typeof plaidItems.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;

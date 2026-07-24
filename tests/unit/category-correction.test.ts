@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterAll, beforeAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions } from "@/db/schema";
+import { seedCategoryId } from "../helpers/category";
 
 const createMock = vi.fn(async () => ({
   content: [{ type: "text", text: '{"category": "Other"}' }],
@@ -48,6 +49,9 @@ describe("category correction feedback loop", () => {
   });
 
   it("a manual correction updates the transaction and auto-resolves future same-merchant transactions with no extra AI call", async () => {
+    const otherId = await seedCategoryId("Other");
+    const subscriptionsId = await seedCategoryId("Subscriptions");
+
     const [txn] = await db
       .insert(transactions)
       .values({
@@ -58,15 +62,15 @@ describe("category correction feedback loop", () => {
         date: "2026-07-01",
         name: "WEIRD MERCHANT CODE 123",
         merchantName: "Weird Merchant",
-        category: "Other",
+        categoryId: otherId,
         categorySource: "plaid",
       })
       .returning();
 
-    await applyCategoryCorrection({ userId, transactionId: txn.id, category: "Subscriptions" });
+    await applyCategoryCorrection({ userId, transactionId: txn.id, categoryId: subscriptionsId });
 
     const updated = await db.query.transactions.findFirst({ where: eq(transactions.id, txn.id) });
-    expect(updated?.category).toBe("Subscriptions");
+    expect(updated?.categoryId).toBe(subscriptionsId);
     expect(updated?.categorySource).toBe("user_correction");
 
     createMock.mockClear();
@@ -80,7 +84,7 @@ describe("category correction feedback loop", () => {
       plaidConfidenceLevel: "LOW",
     });
 
-    expect(resolved).toEqual({ category: "Subscriptions", source: "user_correction" });
+    expect(resolved).toEqual({ categoryId: subscriptionsId, source: "user_correction" });
     expect(createMock).not.toHaveBeenCalled();
   });
 });

@@ -6,13 +6,13 @@ import { requireUserId } from "@/lib/auth";
 import { db } from "@/db";
 import { budgets } from "@/db/schema";
 
-export async function upsertBudget(category: string, monthlyLimit: number) {
+export async function upsertBudget(categoryId: string, monthlyLimit: number) {
   const userId = await requireUserId();
   await db
     .insert(budgets)
-    .values({ userId, category, monthlyLimit: monthlyLimit.toString() })
+    .values({ userId, categoryId, monthlyLimit: monthlyLimit.toString() })
     .onConflictDoUpdate({
-      target: [budgets.userId, budgets.category],
+      target: [budgets.userId, budgets.categoryId],
       set: { monthlyLimit: monthlyLimit.toString(), updatedAt: new Date() },
     });
   revalidatePath("/budgets");

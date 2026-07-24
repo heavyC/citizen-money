@@ -1,12 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 interface TransactionFiltersState {
-  category: string | null;
+  categoryId: string | null;
   search: string;
 }
 
 const initialState: TransactionFiltersState = {
-  category: null,
+  categoryId: null,
   search: "",
 };
 
@@ -14,8 +14,8 @@ const transactionFiltersSlice = createSlice({
   name: "transactionFilters",
   initialState,
   reducers: {
-    setCategory(state, action: PayloadAction<string | null>) {
-      state.category = action.payload;
+    setCategoryId(state, action: PayloadAction<string | null>) {
+      state.categoryId = action.payload;
     },
     setSearch(state, action: PayloadAction<string>) {
       state.search = action.payload;
@@ -23,5 +23,5 @@ const transactionFiltersSlice = createSlice({
   },
 });
 
-export const { setCategory, setSearch } = transactionFiltersSlice.actions;
+export const { setCategoryId, setSearch } = transactionFiltersSlice.actions;
 export default transactionFiltersSlice.reducer;

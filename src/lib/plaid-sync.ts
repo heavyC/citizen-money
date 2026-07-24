@@ -80,7 +80,7 @@ export async function syncItemTransactions(plaidItemRowId: string) {
       const accountRowId = accountIdByPlaidId.get(txn.account_id);
       if (!accountRowId) continue;
 
-      const { category, source } = await resolveCategory({
+      const { categoryId, source } = await resolveCategory({
         userId: item.userId,
         name: txn.name,
         merchantName: txn.merchant_name,
@@ -103,7 +103,7 @@ export async function syncItemTransactions(plaidItemRowId: string) {
           merchantName: txn.merchant_name ?? null,
           plaidCategory: txn.personal_finance_category?.detailed ?? null,
           plaidCategoryConfidence: txn.personal_finance_category?.confidence_level ?? null,
-          category,
+          categoryId,
           categorySource: source,
           pending: txn.pending,
         })

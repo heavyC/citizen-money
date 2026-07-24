@@ -1,24 +1,24 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setCategory, setSearch } from "@/store/slices/transaction-filters-slice";
-import { CATEGORIES } from "@/lib/categories";
+import { setCategoryId, setSearch } from "@/store/slices/transaction-filters-slice";
+import type { DbCategory } from "@/db/schema";
 
-export function TransactionFilters() {
+export function TransactionFilters({ categories }: { categories: DbCategory[] }) {
   const dispatch = useAppDispatch();
-  const { category, search } = useAppSelector((state) => state.transactionFilters);
+  const { categoryId, search } = useAppSelector((state) => state.transactionFilters);
 
   return (
     <div className="flex gap-3">
       <select
-        value={category ?? ""}
-        onChange={(e) => dispatch(setCategory(e.target.value || null))}
+        value={categoryId ?? ""}
+        onChange={(e) => dispatch(setCategoryId(e.target.value || null))}
         className="rounded-md border bg-background px-2 py-1.5 text-sm"
       >
         <option value="">All categories</option>
-        {CATEGORIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
           </option>
         ))}
       </select>

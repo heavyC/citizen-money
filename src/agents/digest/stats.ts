@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { subscriptions, transactions } from "@/db/schema";
+import { categories, subscriptions, transactions } from "@/db/schema";
 import { getNetWorth } from "@/lib/finance";
 
 function isoDate(d: Date): string {
@@ -37,10 +37,11 @@ export async function computeWeeklyStats(userId: string): Promise<WeeklyStats> {
       .from(transactions)
       .where(and(eq(transactions.userId, userId), gte(transactions.date, periodStart), lte(transactions.date, periodEnd), sql`${transactions.amount} > 0`)),
     db
-      .select({ category: transactions.category, total: sql<string>`sum(${transactions.amount})` })
+      .select({ category: categories.name, total: sql<string>`sum(${transactions.amount})` })
       .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
       .where(and(eq(transactions.userId, userId), gte(transactions.date, periodStart), lte(transactions.date, periodEnd), sql`${transactions.amount} > 0`))
-      .groupBy(transactions.category)
+      .groupBy(categories.name)
       .orderBy(sql`sum(${transactions.amount}) desc`)
       .limit(1),
     db

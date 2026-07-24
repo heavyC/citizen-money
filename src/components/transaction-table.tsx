@@ -2,27 +2,33 @@
 
 import { useMemo } from "react";
 import { useAppSelector } from "@/store/hooks";
-import { CATEGORIES } from "@/lib/categories";
 import { correctTransactionCategory } from "@/app/transactions/actions";
-import type { Transaction } from "@/db/schema";
+import type { DbCategory } from "@/db/schema";
+import type { TransactionWithCategory } from "@/lib/finance";
 
 function formatCurrency(value: string): string {
   return Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
-export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
-  const { category, search } = useAppSelector((state) => state.transactionFilters);
+export function TransactionTable({
+  transactions,
+  categories,
+}: {
+  transactions: TransactionWithCategory[];
+  categories: DbCategory[];
+}) {
+  const { categoryId, search } = useAppSelector((state) => state.transactionFilters);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return transactions.filter((txn) => {
-      if (category && txn.category !== category) return false;
+      if (categoryId && txn.categoryId !== categoryId) return false;
       if (term && !txn.name.toLowerCase().includes(term) && !(txn.merchantName ?? "").toLowerCase().includes(term)) {
         return false;
       }
       return true;
     });
-  }, [transactions, category, search]);
+  }, [transactions, categoryId, search]);
 
   if (filtered.length === 0) {
     return <p className="text-sm text-muted-foreground">No transactions match.</p>;
@@ -45,18 +51,15 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
             <td className="py-2">{txn.merchantName ?? txn.name}</td>
             <td className="py-2">
               <select
-                defaultValue={txn.category}
+                defaultValue={txn.categoryId}
                 onChange={(e) => correctTransactionCategory(txn.id, e.target.value)}
                 className="rounded-md border bg-background px-1.5 py-1 text-sm"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
-                {!CATEGORIES.includes(txn.category as (typeof CATEGORIES)[number]) && (
-                  <option value={txn.category}>{txn.category}</option>
-                )}
               </select>
             </td>
             <td className="py-2 text-right tabular-nums">{formatCurrency(txn.amount)}</td>

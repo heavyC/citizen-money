@@ -4,13 +4,17 @@ import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, budgets } from "@/db/schema";
 import { runBudgetVarianceChecker } from "@/agents/insights/budget-variance-checker";
 import { monthRange } from "@/lib/date-range";
+import { seedCategoryId } from "../helpers/category";
 
 const clerkUserId = `test_budget_variance_${crypto.randomUUID()}`;
 let userId: string;
 let accountId: string;
+let groceriesId: string;
 
 describe("budget variance checker", () => {
   beforeAll(async () => {
+    groceriesId = await seedCategoryId("Groceries");
+
     const [user] = await db.insert(users).values({ clerkUserId, email: "budget-variance-test@example.com" }).returning();
     userId = user.id;
     const [item] = await db.insert(plaidItems).values({ userId, plaidItemId: `item_${userId}`, accessToken: "x" }).returning();
@@ -19,7 +23,7 @@ describe("budget variance checker", () => {
       .values({ plaidItemId: item.id, userId, plaidAccountId: `acc_${userId}`, name: "Checking", type: "depository" })
       .returning();
     accountId = account.id;
-    await db.insert(budgets).values({ userId, category: "Groceries", monthlyLimit: "100.00" });
+    await db.insert(budgets).values({ userId, categoryId: groceriesId, monthlyLimit: "100.00" });
   });
 
   afterAll(async () => {
@@ -34,12 +38,13 @@ describe("budget variance checker", () => {
       amount: "150.00",
       date: monthRange(0).from,
       name: "Grocery Store",
-      category: "Groceries",
+      categoryId: groceriesId,
     });
 
     const candidates = await runBudgetVarianceChecker(userId);
     expect(candidates).toHaveLength(1);
-    expect(candidates[0].dedupKey).toMatch(/^budget-variance:Groceries:/);
+    expect(candidates[0].dedupKey).toMatch(new RegExp(`^budget-variance:${groceriesId}:`));
+    expect(candidates[0].title).toBe("Over budget in Groceries");
   });
 
   it("stays silent when spend is under the budget", async () => {
@@ -50,7 +55,7 @@ describe("budget variance checker", () => {
       .insert(accounts)
       .values({ plaidItemId: item.id, userId: user.id, plaidAccountId: `acc_${user.id}`, name: "Checking", type: "depository" })
       .returning();
-    await db.insert(budgets).values({ userId: user.id, category: "Groceries", monthlyLimit: "500.00" });
+    await db.insert(budgets).values({ userId: user.id, categoryId: groceriesId, monthlyLimit: "500.00" });
     await db.insert(transactions).values({
       accountId: account.id,
       userId: user.id,
@@ -58,7 +63,7 @@ describe("budget variance checker", () => {
       amount: "50.00",
       date: monthRange(0).from,
       name: "Grocery Store",
-      category: "Groceries",
+      categoryId: groceriesId,
     });
 
     const candidates = await runBudgetVarianceChecker(user.id);

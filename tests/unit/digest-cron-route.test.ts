@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, plaidItems, accounts, transactions, digests } from "@/db/schema";
+import { seedCategoryId } from "../helpers/category";
 
 const sendDigestEmailMock = vi.fn(async () => ({ data: { id: "email_123" }, error: null }));
 vi.mock("@/lib/resend", () => ({ sendDigestEmail: sendDigestEmailMock }));
@@ -26,6 +27,7 @@ describe("GET /api/cron/digest", () => {
       .insert(accounts)
       .values({ plaidItemId: item.id, userId, plaidAccountId: `acc_${userId}`, name: "Checking", type: "depository" })
       .returning();
+    const categoryId = await seedCategoryId("Coffee Shops");
     await db.insert(transactions).values({
       accountId: account.id,
       userId,
@@ -33,7 +35,7 @@ describe("GET /api/cron/digest", () => {
       amount: "42.00",
       date: daysAgo(1),
       name: "Coffee Shop",
-      category: "Coffee Shops",
+      categoryId,
     });
   });
 

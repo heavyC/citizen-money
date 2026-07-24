@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { transactions } from "@/db/schema";
+import { categories, transactions } from "@/db/schema";
 import { monthRange } from "@/lib/date-range";
 import type { InsightCandidate } from "./types";
 
@@ -15,7 +15,7 @@ export async function runAnomalyDetector(userId: string): Promise<InsightCandida
 
   const history = await db
     .select({
-      category: transactions.category,
+      categoryId: transactions.categoryId,
       avgAmount: sql<string>`avg(${transactions.amount})`,
       count: sql<string>`count(*)`,
     })
@@ -28,30 +28,39 @@ export async function runAnomalyDetector(userId: string): Promise<InsightCandida
         sql`${transactions.amount} > 0`,
       ),
     )
-    .groupBy(transactions.category);
+    .groupBy(transactions.categoryId);
 
   const baseline = new Map(
     history
       .filter((h) => Number(h.count) >= MIN_HISTORY_SAMPLES)
-      .map((h) => [h.category, Number(h.avgAmount)]),
+      .map((h) => [h.categoryId, Number(h.avgAmount)]),
   );
 
   if (baseline.size === 0) return [];
 
-  const currentTxns = await db.query.transactions.findMany({
-    where: and(eq(transactions.userId, userId), gte(transactions.date, current.from), sql`${transactions.amount} > 0`),
-  });
+  const currentTxns = await db
+    .select({
+      id: transactions.id,
+      name: transactions.name,
+      merchantName: transactions.merchantName,
+      amount: transactions.amount,
+      categoryId: transactions.categoryId,
+      categoryName: categories.name,
+    })
+    .from(transactions)
+    .innerJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(and(eq(transactions.userId, userId), gte(transactions.date, current.from), sql`${transactions.amount} > 0`));
 
   const candidates: InsightCandidate[] = [];
   for (const txn of currentTxns) {
-    const avg = baseline.get(txn.category);
+    const avg = baseline.get(txn.categoryId);
     if (!avg) continue;
     const amount = Number(txn.amount);
     if (amount > avg * ANOMALY_MULTIPLIER) {
       candidates.push({
         type: "anomaly",
         title: "Unusual charge detected",
-        body: `${txn.merchantName ?? txn.name} charged $${amount.toFixed(2)} in ${txn.category}, well above your typical $${avg.toFixed(2)} for that category.`,
+        body: `${txn.merchantName ?? txn.name} charged $${amount.toFixed(2)} in ${txn.categoryName}, well above your typical $${avg.toFixed(2)} for that category.`,
         severity: "warning",
         dedupKey: `anomaly:${txn.id}`,
         metadata: { transactionId: txn.id, amount, categoryAverage: avg },

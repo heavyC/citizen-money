@@ -2,6 +2,7 @@ import { describe, expect, it, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, transactions, accounts, plaidItems } from "@/db/schema";
+import { seedCategoryId } from "../helpers/category";
 
 describe("db round-trip", () => {
   const clerkUserId = `test_${crypto.randomUUID()}`;
@@ -38,6 +39,7 @@ describe("db round-trip", () => {
       })
       .returning();
 
+    const categoryId = await seedCategoryId("Groceries");
     const [txn] = await db
       .insert(transactions)
       .values({
@@ -47,7 +49,7 @@ describe("db round-trip", () => {
         amount: "42.50",
         date: "2026-07-01",
         name: "Test Merchant",
-        category: "Groceries",
+        categoryId,
       })
       .returning();
 

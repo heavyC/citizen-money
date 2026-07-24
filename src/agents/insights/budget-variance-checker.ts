@@ -1,13 +1,17 @@
 import "server-only";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { budgets, transactions } from "@/db/schema";
+import { budgets, categories, transactions } from "@/db/schema";
 import { monthRange, currentYearMonth } from "@/lib/date-range";
 import type { InsightCandidate } from "./types";
 
 export async function runBudgetVarianceChecker(userId: string): Promise<InsightCandidate[]> {
   const { from, to } = monthRange(0);
-  const userBudgets = await db.query.budgets.findMany({ where: eq(budgets.userId, userId) });
+  const userBudgets = await db
+    .select({ id: budgets.id, categoryId: budgets.categoryId, categoryName: categories.name, monthlyLimit: budgets.monthlyLimit })
+    .from(budgets)
+    .innerJoin(categories, eq(budgets.categoryId, categories.id))
+    .where(eq(budgets.userId, userId));
   if (userBudgets.length === 0) return [];
 
   const candidates: InsightCandidate[] = [];
@@ -19,7 +23,7 @@ export async function runBudgetVarianceChecker(userId: string): Promise<InsightC
       .where(
         and(
           eq(transactions.userId, userId),
-          sql`lower(${transactions.category}) = lower(${budget.category})`,
+          eq(transactions.categoryId, budget.categoryId),
           gte(transactions.date, from),
           lte(transactions.date, to),
           sql`${transactions.amount} > 0`,
@@ -31,11 +35,11 @@ export async function runBudgetVarianceChecker(userId: string): Promise<InsightC
     if (spent > limit) {
       candidates.push({
         type: "budget_variance",
-        title: `Over budget in ${budget.category}`,
-        body: `You've spent $${spent.toFixed(2)} on ${budget.category} this month, over your $${limit.toFixed(2)} budget.`,
+        title: `Over budget in ${budget.categoryName}`,
+        body: `You've spent $${spent.toFixed(2)} on ${budget.categoryName} this month, over your $${limit.toFixed(2)} budget.`,
         severity: "action",
-        dedupKey: `budget-variance:${budget.category}:${currentYearMonth()}`,
-        metadata: { category: budget.category, spent, limit },
+        dedupKey: `budget-variance:${budget.categoryId}:${currentYearMonth()}`,
+        metadata: { category: budget.categoryName, spent, limit },
       });
     }
   }
